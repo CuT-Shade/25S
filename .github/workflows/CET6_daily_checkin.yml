@@ -24,14 +24,22 @@ jobs:
               const now = new Date()
               const chinaTime = new Date(now.getTime() + (8 * 60 * 60 * 1000)) // UTC+8
               const chinaDate = chinaTime.toISOString().split('T')[0]
-              const fullDateTime = chinaTime.toISOString() // 带时区的完整格式
 
-              // 2. 创建Issue
+              // 2. 创建带有父级 issue 引用的 Issue
+              const issueBody = `parent: #9
+
+请填写今日CET6进展：
+- [ ] 背单词
+- [ ] 听听力
+- [ ] 做真题
+
+> 本条目是自动创建的每日打卡任务，父任务为 [EN-Review #9](${context.repo.owner}/${context.repo.repo}/issues/9)`
+
               const issue = await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: `[CET6打卡] ${chinaDate}`,
-                body: '请填写今日CET6进展：\n- [ ] 背单词\n- [ ] 听听力\n- [ ] 做真题',
+                body: issueBody,
                 assignees: ['CuT-Shade'],
                 labels: ['@6-提升计划'],
                 milestone: 6
@@ -67,8 +75,6 @@ jobs:
                 login: 'CuT-Shade',
                 number: 1
               });
-
-              console.log('Project query result:', JSON.stringify(projectQuery, null, 2))
 
               const projectId = projectQuery.user.projectV2.id
               console.log('Project ID:', projectId)
