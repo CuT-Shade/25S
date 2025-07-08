@@ -2,7 +2,7 @@ name: CET6 Daily Checkin Automation
 on:
   schedule:
     - cron: '0 20 * * *'  # UTC时间20:00 = 北京时间次日4:00
-    workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   issues: write
