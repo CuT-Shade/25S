@@ -52,19 +52,7 @@ jobs:
             const projectId = projects.repository.projectsV2.nodes[0].id; // 取第一个项目
 
             // 4. 添加到Project并获取item ID
-            # const addToProject = await graphql(`
-            #   mutation {
-            #     addProjectV2ItemById(input: {
-            #       projectId: "1"  # 替换为你的项目ID
-            #       contentId: "${issue.data.node_id}"
-            #     }) {
-            #       item {
-            #         id
-            #       }
-            #     }
-            #   }
-            # `)
-            # const itemId = addToProject.addProjectV2ItemById.item.id
+
 
             await graphql(`
               mutation {
