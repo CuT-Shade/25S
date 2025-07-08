@@ -38,15 +38,13 @@ jobs:
 
               console.log('Issue created successfully:', issue.data.number)
 
-              // 3. 获取项目ID（自动查询）
+              // 3. 获取用户级别的项目ID
               const projectsQuery = await github.graphql(`
                 query {
-                  repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-                    projectsV2(first: 10) {
-                      nodes {
-                        id
-                        title
-                      }
+                  user(login: "CuT-Shade") {
+                    projectV2(number: 1) {
+                      id
+                      title
                     }
                   }
                 }
@@ -54,11 +52,7 @@ jobs:
 
               console.log('Projects query result:', JSON.stringify(projectsQuery, null, 2))
 
-              if (!projectsQuery.repository?.projectsV2?.nodes?.length) {
-                throw new Error('No projects found in repository')
-              }
-
-              const projectId = projectsQuery.repository.projectsV2.nodes[0].id
+              const projectId = projectsQuery.user.projectV2.id
               console.log('Selected project ID:', projectId)
 
               // 4. 添加到Project并获取item ID
