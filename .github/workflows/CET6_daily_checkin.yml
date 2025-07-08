@@ -50,6 +50,14 @@ jobs:
 
               console.log('Issue created successfully:', issue.data.number);
 
+              // 在父 issue #9 中添加任务项
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: 9, // 父 issue 编号
+                body: `- [ ] ${newIssue.data.title} #${newIssue.data.number}`
+              });
+
               // 3. 获取项目ID、状态字段和选项
               const projectQuery = await graphql(`
                 query($login: String!, $number: Int!) {
