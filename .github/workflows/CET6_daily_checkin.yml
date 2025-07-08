@@ -39,28 +39,44 @@ jobs:
 
               console.log('Issue created successfully:', issue.data.number)
 
-              // 3. 获取项目ID
-              const userProjectQuery = await graphql(`
+              // 3. 获取项目ID和字段
+              const projectQuery = await graphql(`
                 query($login: String!, $number: Int!) {
                   user(login: $login) {
                     projectV2(number: $number) {
                       id
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2Field {
+                            id
+                            name
+                          }
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                          }
+                          ... on ProjectV2DateField {
+                            id
+                            name
+                          }
+                        }
+                      }
                     }
                   }
                 }
               `, {
                 login: 'CuT-Shade',
-                number: 1  // 直接使用数字 1，而不是环境变量
+                number: 1
               });
 
-              console.log('Project query result:', JSON.stringify(userProjectQuery, null, 2))
+              console.log('Project query result:', JSON.stringify(projectQuery, null, 2))
 
-              if (!userProjectQuery.user?.projectV2?.id) {
-                throw new Error('Project not found. Please check the project number and permissions.')
-              }
-
-              const projectId = userProjectQuery.user.projectV2.id
+              const projectId = projectQuery.user.projectV2.id
               console.log('Project ID:', projectId)
+
+              // 找到日期字段的ID
+              const fields = projectQuery.user.projectV2.fields.nodes
+              console.log('Available fields:', fields.map(f => ({ id: f.id, name: f.name })))
 
               // 4. 添加到Project并获取item ID
               const addToProjectResult = await graphql(`
@@ -84,30 +100,38 @@ jobs:
               const itemId = addToProjectResult.addProjectV2ItemById.item.id
               console.log('Item ID:', itemId)
 
-              // 5. 更新自定义日期字段
-              const updateResult = await graphql(`
-                mutation($projectId: ID!, $itemId: ID!, $date: Date!) {
-                  setStartDate: updateProjectV2ItemFieldValue(input: {
-                    projectId: $projectId
-                    itemId: $itemId
-                    fieldId: "PVTSSF_205924339"  # Start date字段ID
-                    value: { date: $date }
-                  }) { clientMutationId }
-                  
-                  setEndDate: updateProjectV2ItemFieldValue(input: {
-                    projectId: $projectId
-                    itemId: $itemId
-                    fieldId: "PVTSSF_205924340"  # End date字段ID
-                    value: { date: $date }
-                  }) { clientMutationId }
-                }
-              `, {
-                projectId: projectId,
-                itemId: itemId,
-                date: chinaDate
-              })
+              // 找到开始日期和结束日期字段
+              const startDateField = fields.find(f => f.name.toLowerCase().includes('start'))
+              const endDateField = fields.find(f => f.name.toLowerCase().includes('end'))
 
-              console.log('Update fields result:', JSON.stringify(updateResult, null, 2))
+              if (startDateField && endDateField) {
+                // 5. 更新日期字段
+                const updateResult = await graphql(`
+                  mutation($projectId: ID!, $itemId: ID!, $date: Date!) {
+                    setStartDate: updateProjectV2ItemFieldValue(input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: "${startDateField.id}"
+                      value: { date: $date }
+                    }) { clientMutationId }
+                    
+                    setEndDate: updateProjectV2ItemFieldValue(input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: "${endDateField.id}"
+                      value: { date: $date }
+                    }) { clientMutationId }
+                  }
+                `, {
+                  projectId: projectId,
+                  itemId: itemId,
+                  date: chinaDate
+                })
+
+                console.log('Update fields result:', JSON.stringify(updateResult, null, 2))
+              } else {
+                console.log('Date fields not found. Available fields:', fields)
+              }
 
             } catch (error) {
               console.error('Error details:', {
