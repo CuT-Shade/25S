@@ -50,24 +50,26 @@ jobs:
 
               console.log('Issue created successfully:', issue.data.number);
 
-              // 3. 获取项目ID和字段
+              // 3. 获取项目ID、状态字段和选项
               const projectQuery = await graphql(`
                 query($login: String!, $number: Int!) {
                   user(login: $login) {
                     projectV2(number: $number) {
                       id
-                      field(name: "Start date") {
-                        ... on ProjectV2FieldCommon {
-                          id
-                          name
-                        }
-                      }
                       fields(first: 20) {
                         nodes {
                           ... on ProjectV2FieldCommon {
                             id
                             name
                             dataType
+                          }
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
+                              id
+                              name
+                            }
                           }
                         }
                       }
@@ -82,12 +84,13 @@ jobs:
               const projectId = projectQuery.user.projectV2.id;
               console.log('Project ID:', projectId);
 
-              // 找到日期字段的ID
+              // 找到字段的ID
               const fields = projectQuery.user.projectV2.fields.nodes;
               console.log('Available fields:', fields.map(f => ({
                 id: f.id,
                 name: f.name,
-                dataType: f.dataType
+                dataType: f.dataType,
+                options: f.options
               })));
 
               // 4. 添加到Project并获取item ID
@@ -107,17 +110,44 @@ jobs:
                 contentId: issue.data.node_id
               });
 
-              console.log('Add to project result:', JSON.stringify(addToProjectResult, null, 2));
-
               const itemId = addToProjectResult.addProjectV2ItemById.item.id;
               console.log('Item ID:', itemId);
 
-              // 找到开始日期和结束日期字段
+              // 5. 更新状态字段
+              const statusField = fields.find(f => f.name === 'Status');
+              if (statusField && statusField.options) {
+                const todoOption = statusField.options.find(o => o.name.toLowerCase() === 'todo');
+                if (todoOption) {
+                  const updateStatusResult = await graphql(`
+                    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                      updateProjectV2ItemFieldValue(input: {
+                        projectId: $projectId
+                        itemId: $itemId
+                        fieldId: $fieldId
+                        value: { 
+                          singleSelectOptionId: $optionId
+                        }
+                      }) {
+                        projectV2Item {
+                          id
+                        }
+                      }
+                    }
+                  `, {
+                    projectId: projectId,
+                    itemId: itemId,
+                    fieldId: statusField.id,
+                    optionId: todoOption.id
+                  });
+                  console.log('Update status result:', JSON.stringify(updateStatusResult, null, 2));
+                }
+              }
+
+              // 6. 找到并更新日期字段
               const startDateField = fields.find(f => f.name.toLowerCase().includes('start') && f.dataType === 'DATE');
               const endDateField = fields.find(f => f.name.toLowerCase().includes('end') && f.dataType === 'DATE');
 
               if (startDateField && endDateField) {
-                // 5. 更新日期字段
                 const updateResult = await graphql(`
                   mutation($projectId: ID!, $itemId: ID!, $date: Date!) {
                     setStartDate: updateProjectV2ItemFieldValue(input: {
