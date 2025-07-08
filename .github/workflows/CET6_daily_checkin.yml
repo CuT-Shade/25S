@@ -45,19 +45,18 @@ jobs:
                   user(login: $login) {
                     projectV2(number: $number) {
                       id
+                      field(name: "Start date") {
+                        ... on ProjectV2FieldCommon {
+                          id
+                          name
+                        }
+                      }
                       fields(first: 20) {
                         nodes {
-                          ... on ProjectV2Field {
+                          ... on ProjectV2FieldCommon {
                             id
                             name
-                          }
-                          ... on ProjectV2SingleSelectField {
-                            id
-                            name
-                          }
-                          ... on ProjectV2DateField {
-                            id
-                            name
+                            dataType
                           }
                         }
                       }
@@ -76,7 +75,7 @@ jobs:
 
               // 找到日期字段的ID
               const fields = projectQuery.user.projectV2.fields.nodes
-              console.log('Available fields:', fields.map(f => ({ id: f.id, name: f.name })))
+              console.log('Available fields:', fields.map(f => ({ id: f.id, name: f.name, dataType: f.dataType })))
 
               // 4. 添加到Project并获取item ID
               const addToProjectResult = await graphql(`
@@ -101,8 +100,8 @@ jobs:
               console.log('Item ID:', itemId)
 
               // 找到开始日期和结束日期字段
-              const startDateField = fields.find(f => f.name.toLowerCase().includes('start'))
-              const endDateField = fields.find(f => f.name.toLowerCase().includes('end'))
+              const startDateField = fields.find(f => f.name.toLowerCase().includes('start') && f.dataType === 'DATE')
+              const endDateField = fields.find(f => f.name.toLowerCase().includes('end') && f.dataType === 'DATE')
 
               if (startDateField && endDateField) {
                 // 5. 更新日期字段
