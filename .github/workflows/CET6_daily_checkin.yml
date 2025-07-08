@@ -1,4 +1,5 @@
 name: CET6 Daily Checkin Automation
+
 on:
   schedule:
     - cron: '0 20 * * *'  # UTC时间20:00 = 北京时间次日4:00
@@ -18,22 +19,24 @@ jobs:
         with:
           github-token: ${{ secrets.PAT }}
           script: |
-            const { graphql } = github
+            const { graphql } = github;
             try {
               // 1. 获取北京时间
-              const now = new Date()
-              const chinaTime = new Date(now.getTime() + (8 * 60 * 60 * 1000)) // UTC+8
-              const chinaDate = chinaTime.toISOString().split('T')[0]
+              const now = new Date();
+              const chinaTime = new Date(now.getTime() + (8 * 60 * 60 * 1000)); // UTC+8
+              const chinaDate = chinaTime.toISOString().split('T')[0];
 
               // 2. 创建带有父级 issue 引用的 Issue
-              const issueBody = `parent: #9
-
-请填写今日CET6进展：
-- [ ] 背单词
-- [ ] 听听力
-- [ ] 做真题
-
-> 本条目是自动创建的每日打卡任务，父任务为 [EN-Review #9](${context.repo.owner}/${context.repo.repo}/issues/9)`
+              const issueBody = [
+                'parent: #9',
+                '',
+                '请填写今日CET6进展：',
+                '- [ ] 背单词',
+                '- [ ] 听听力',
+                '- [ ] 做真题',
+                '',
+                `> 本条目是自动创建的每日打卡任务，父任务为 [EN-Review #9](${context.repo.owner}/${context.repo.repo}/issues/9)`
+              ].join('\n');
 
               const issue = await github.rest.issues.create({
                 owner: context.repo.owner,
@@ -43,9 +46,9 @@ jobs:
                 assignees: ['CuT-Shade'],
                 labels: ['@6-提升计划'],
                 milestone: 6
-              })
+              });
 
-              console.log('Issue created successfully:', issue.data.number)
+              console.log('Issue created successfully:', issue.data.number);
 
               // 3. 获取项目ID和字段
               const projectQuery = await graphql(`
@@ -76,12 +79,16 @@ jobs:
                 number: 1
               });
 
-              const projectId = projectQuery.user.projectV2.id
-              console.log('Project ID:', projectId)
+              const projectId = projectQuery.user.projectV2.id;
+              console.log('Project ID:', projectId);
 
               // 找到日期字段的ID
-              const fields = projectQuery.user.projectV2.fields.nodes
-              console.log('Available fields:', fields.map(f => ({ id: f.id, name: f.name, dataType: f.dataType })))
+              const fields = projectQuery.user.projectV2.fields.nodes;
+              console.log('Available fields:', fields.map(f => ({
+                id: f.id,
+                name: f.name,
+                dataType: f.dataType
+              })));
 
               // 4. 添加到Project并获取item ID
               const addToProjectResult = await graphql(`
@@ -98,16 +105,16 @@ jobs:
               `, {
                 projectId: projectId,
                 contentId: issue.data.node_id
-              })
+              });
 
-              console.log('Add to project result:', JSON.stringify(addToProjectResult, null, 2))
+              console.log('Add to project result:', JSON.stringify(addToProjectResult, null, 2));
 
-              const itemId = addToProjectResult.addProjectV2ItemById.item.id
-              console.log('Item ID:', itemId)
+              const itemId = addToProjectResult.addProjectV2ItemById.item.id;
+              console.log('Item ID:', itemId);
 
               // 找到开始日期和结束日期字段
-              const startDateField = fields.find(f => f.name.toLowerCase().includes('start') && f.dataType === 'DATE')
-              const endDateField = fields.find(f => f.name.toLowerCase().includes('end') && f.dataType === 'DATE')
+              const startDateField = fields.find(f => f.name.toLowerCase().includes('start') && f.dataType === 'DATE');
+              const endDateField = fields.find(f => f.name.toLowerCase().includes('end') && f.dataType === 'DATE');
 
               if (startDateField && endDateField) {
                 // 5. 更新日期字段
@@ -131,11 +138,11 @@ jobs:
                   projectId: projectId,
                   itemId: itemId,
                   date: chinaDate
-                })
+                });
 
-                console.log('Update fields result:', JSON.stringify(updateResult, null, 2))
+                console.log('Update fields result:', JSON.stringify(updateResult, null, 2));
               } else {
-                console.log('Date fields not found. Available fields:', fields)
+                console.log('Date fields not found. Available fields:', fields);
               }
 
             } catch (error) {
@@ -143,6 +150,6 @@ jobs:
                 message: error.message,
                 stack: error.stack,
                 data: error.data
-              })
-              core.setFailed(`Workflow failed: ${error.message}`)
+              });
+              core.setFailed(`Workflow failed: ${error.message}`);
             }
