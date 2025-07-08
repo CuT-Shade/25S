@@ -6,8 +6,8 @@ on:
 
 permissions:
   issues: write
-  projects: write
-  contents: write  # 新增权限
+  repository-projects: write
+  contents: write 
 
 jobs:
   create-checkin-issue:
