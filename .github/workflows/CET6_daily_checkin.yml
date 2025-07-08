@@ -41,10 +41,14 @@ jobs:
               // 3. 获取用户级别的项目ID
               const projectsQuery = await github.graphql(`
                 query {
-                  user(login: "CuT-Shade") {
-                    projectV2(number: 1) {
-                      id
-                      title
+                  viewer {
+                    projectsV2(first: 20) {
+                      nodes {
+                        id
+                        title
+                        number
+                        url
+                      }
                     }
                   }
                 }
@@ -52,8 +56,19 @@ jobs:
 
               console.log('Projects query result:', JSON.stringify(projectsQuery, null, 2))
 
-              const projectId = projectsQuery.user.projectV2.id
-              console.log('Selected project ID:', projectId)
+              // 找到第一个项目
+              const project = projectsQuery.viewer.projectsV2.nodes[0]
+              if (!project) {
+                throw new Error('No projects found')
+              }
+
+              const projectId = project.id
+              console.log('Selected project:', {
+                id: project.id,
+                title: project.title,
+                number: project.number,
+                url: project.url
+              })
 
               // 4. 添加到Project并获取item ID
               const addToProjectResult = await graphql(`
