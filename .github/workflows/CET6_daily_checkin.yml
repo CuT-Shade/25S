@@ -36,11 +36,40 @@ jobs:
               milestone: 6
             })
 
-            // 3. 添加到Project并获取item ID
-            const addToProject = await graphql(`
+            // 3. 获取项目ID（自动查询）
+            const projects = await github.graphql(`
+              query {
+                repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+                  projectsV2(first: 10) {
+                    nodes {
+                      id
+                      title
+                    }
+                  }
+                }
+              }
+            `);
+            const projectId = projects.repository.projectsV2.nodes[0].id; // 取第一个项目
+
+            // 4. 添加到Project并获取item ID
+            # const addToProject = await graphql(`
+            #   mutation {
+            #     addProjectV2ItemById(input: {
+            #       projectId: "1"  # 替换为你的项目ID
+            #       contentId: "${issue.data.node_id}"
+            #     }) {
+            #       item {
+            #         id
+            #       }
+            #     }
+            #   }
+            # `)
+            # const itemId = addToProject.addProjectV2ItemById.item.id
+
+            await graphql(`
               mutation {
                 addProjectV2ItemById(input: {
-                  projectId: "1"  # 替换为你的项目ID
+                  projectId: "${projectId}",
                   contentId: "${issue.data.node_id}"
                 }) {
                   item {
@@ -49,9 +78,8 @@ jobs:
                 }
               }
             `)
-            const itemId = addToProject.addProjectV2ItemById.item.id
   
-            // 4. 更新自定义日期字段（根据你的JSON中的ID）
+            // 5. 更新自定义日期字段（根据你的JSON中的ID）
             await graphql(`
               mutation {
                 setStartDate: updateProjectV2ItemFieldValue(input: {
