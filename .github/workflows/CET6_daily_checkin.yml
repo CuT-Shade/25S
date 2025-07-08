@@ -15,7 +15,10 @@ jobs:
     steps:
       - name: Create Daily Checkin Issue
         uses: actions/github-script@v6
+        env:
+          PROJECT_NUMBER: 1  # 你的项目编号
         with:
+          github-token: ${{ secrets.PAT }}  # 使用你创建的 PAT
           script: |
             const { graphql } = github
             try {
@@ -38,51 +41,45 @@ jobs:
 
               console.log('Issue created successfully:', issue.data.number)
 
-              // 3. 获取用户级别的项目ID
-              const projectsQuery = await github.graphql(`
-                query {
-                  viewer {
-                    projectsV2(first: 20) {
-                      nodes {
-                        id
-                        title
-                        number
-                        url
-                      }
+              // 3. 获取项目ID
+              const userProjectQuery = await graphql(`
+                query($login: String!, $number: Int!) {
+                  user(login: $login) {
+                    projectV2(number: $number) {
+                      id
                     }
                   }
                 }
-              `);
+              `, {
+                login: 'CuT-Shade',
+                number: process.env.PROJECT_NUMBER
+              });
 
-              console.log('Projects query result:', JSON.stringify(projectsQuery, null, 2))
+              console.log('Project query result:', JSON.stringify(userProjectQuery, null, 2))
 
-              // 找到第一个项目
-              const project = projectsQuery.viewer.projectsV2.nodes[0]
-              if (!project) {
-                throw new Error('No projects found')
+              if (!userProjectQuery.user?.projectV2?.id) {
+                throw new Error('Project not found. Please check the project number and permissions.')
               }
 
-              const projectId = project.id
-              console.log('Selected project:', {
-                id: project.id,
-                title: project.title,
-                number: project.number,
-                url: project.url
-              })
+              const projectId = userProjectQuery.user.projectV2.id
+              console.log('Project ID:', projectId)
 
               // 4. 添加到Project并获取item ID
               const addToProjectResult = await graphql(`
-                mutation {
+                mutation($projectId: ID!, $contentId: ID!) {
                   addProjectV2ItemById(input: {
-                    projectId: "${projectId}",
-                    contentId: "${issue.data.node_id}"
+                    projectId: $projectId,
+                    contentId: $contentId
                   }) {
                     item {
                       id
                     }
                   }
                 }
-              `)
+              `, {
+                projectId: projectId,
+                contentId: issue.data.node_id
+              })
 
               console.log('Add to project result:', JSON.stringify(addToProjectResult, null, 2))
 
@@ -91,22 +88,26 @@ jobs:
 
               // 5. 更新自定义日期字段
               const updateResult = await graphql(`
-                mutation {
+                mutation($projectId: ID!, $itemId: ID!, $date: Date!) {
                   setStartDate: updateProjectV2ItemFieldValue(input: {
-                    projectId: "${projectId}"
-                    itemId: "${itemId}"
+                    projectId: $projectId
+                    itemId: $itemId
                     fieldId: "PVTSSF_205924339"  # Start date字段ID
-                    value: { date: "${chinaDate}" }
+                    value: { date: $date }
                   }) { clientMutationId }
                   
                   setEndDate: updateProjectV2ItemFieldValue(input: {
-                    projectId: "${projectId}"
-                    itemId: "${itemId}"
+                    projectId: $projectId
+                    itemId: $itemId
                     fieldId: "PVTSSF_205924340"  # End date字段ID
-                    value: { date: "${chinaDate}" }
+                    value: { date: $date }
                   }) { clientMutationId }
                 }
-              `)
+              `, {
+                projectId: projectId,
+                itemId: itemId,
+                date: chinaDate
+              })
 
               console.log('Update fields result:', JSON.stringify(updateResult, null, 2))
 
