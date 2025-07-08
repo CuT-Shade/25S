@@ -28,6 +28,7 @@ jobs:
 
               // 2. 创建带有父级 issue 引用的 Issue
               const issueBody = [
+                'parent: #9',
                 '',
                 '请填写今日CET6进展：',
                 '- [ ] 背单词',
@@ -49,60 +50,7 @@ jobs:
 
               console.log('Issue created successfully:', issue.data.number);
 
-              // 在父 issue #9 中添加任务项
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: 9, // 父 issue 编号
-                body: `- [ ] ${issue.data.title} #${issue.data.number}`
-              });
-              
-              // 3. 使用GraphQL API将新创建的issue添加为父issue的子issue
-              // 首先获取父issue和新issue的node IDs
-              const issuesQuery = await graphql(`
-                query($owner: String!, $repo: String!, $parentIssueNumber: Int!, $newIssueNumber: Int!) {
-                  parentIssue: repository(owner: $owner, name: $repo) {
-                    issue(number: $parentIssueNumber) {
-                      id
-                    }
-                  }
-                  newIssue: repository(owner: $owner, name: $repo) {
-                    issue(number: $newIssueNumber) {
-                      id
-                    }
-                  }
-                }
-              `, {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                parentIssueNumber: 9,  // 父issue编号
-                newIssueNumber: issue.data.number  // 新创建的issue编号
-              });
-              
-              // 使用获取的node IDs来建立父子关系
-              await graphql(`
-                mutation($parentId: ID!, $childId: ID!) {
-                  addSubissue(input: {
-                    parentId: $parentId,
-                    childId: $childId
-                  }) {
-                    parentIssue {
-                      id
-                    }
-                    childIssue {
-                      id
-                    }
-                  }
-                }
-              `, {
-                parentId: issuesQuery.parentIssue.issue.id,
-                childId: issuesQuery.newIssue.issue.id
-              });
-              
-              console.log('Sub-issue relationship created successfully');
-
-              // 4. 获取项目ID、状态字段和选项
-              // ... 其余项目相关代码保持不变 ...
+              // 3. 获取项目ID、状态字段和选项
               const projectQuery = await graphql(`
                 query($login: String!, $number: Int!) {
                   user(login: $login) {
@@ -145,7 +93,7 @@ jobs:
                 options: f.options
               })));
 
-              // 5. 添加到Project并获取item ID
+              // 4. 添加到Project并获取item ID
               const addToProjectResult = await graphql(`
                 mutation($projectId: ID!, $contentId: ID!) {
                   addProjectV2ItemById(input: {
@@ -165,7 +113,7 @@ jobs:
               const itemId = addToProjectResult.addProjectV2ItemById.item.id;
               console.log('Item ID:', itemId);
 
-              // 6. 更新状态字段
+              // 5. 更新状态字段
               const statusField = fields.find(f => f.name === 'Status');
               if (statusField && statusField.options) {
                 const todoOption = statusField.options.find(o => o.name.toLowerCase() === 'todo');
@@ -195,7 +143,7 @@ jobs:
                 }
               }
 
-              // 7. 找到并更新日期字段
+              // 6. 找到并更新日期字段
               const startDateField = fields.find(f => f.name.toLowerCase().includes('start') && f.dataType === 'DATE');
               const endDateField = fields.find(f => f.name.toLowerCase().includes('end') && f.dataType === 'DATE');
 
