@@ -55,7 +55,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: 9, // 父 issue 编号
-                body: `- [ ] ${newIssue.data.title} #${newIssue.data.number}`
+                body: `- [ ] ${issue.data.title} #${issue.data.number}`
               });
 
               // 3. 获取项目ID、状态字段和选项
