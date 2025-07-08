@@ -1,0 +1,19 @@
+name: "📅 每日CET6打卡"
+description: "记录每日CET6任务完成情况"
+title: "[打卡] YYYY-MM-DD"
+labels: ["daily"]
+body:
+  - type: textarea
+    id: progress
+    attributes:
+      label: "今日进展"
+      description: "填写今日完成的任务或学习内容"
+    validations:
+      required: true
+  - type: checkboxes
+    id: completed
+    attributes:
+      label: "完成状态"
+      options:
+        - label: "任务已完成"
+          required: false
