@@ -15,10 +15,8 @@ jobs:
     steps:
       - name: Create Daily Checkin Issue
         uses: actions/github-script@v6
-        env:
-          PROJECT_NUMBER: 1  # 你的项目编号
         with:
-          github-token: ${{ secrets.PAT }}  # 使用你创建的 PAT
+          github-token: ${{ secrets.PAT }}
           script: |
             const { graphql } = github
             try {
@@ -52,7 +50,7 @@ jobs:
                 }
               `, {
                 login: 'CuT-Shade',
-                number: process.env.PROJECT_NUMBER
+                number: 1  // 直接使用数字 1，而不是环境变量
               });
 
               console.log('Project query result:', JSON.stringify(userProjectQuery, null, 2))
