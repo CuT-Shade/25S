@@ -1,9 +1,10 @@
 name: Watch Workflow Changes and Trigger
 
 on:
-  push:
-    paths:
-      - '.github/workflows/CET6_daily_checkin.yml'
+  # push:
+  #   paths:
+  #     - '.github/workflows/CET6_daily_checkin.yml'
+  workflow_dispatch: {}
 
 jobs:
   trigger-daily-checkin:
