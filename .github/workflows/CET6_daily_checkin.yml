@@ -25,67 +25,67 @@ jobs:
               const chinaDate = chinaTime.toISOString().split('T')[0]
               const fullDateTime = chinaTime.toISOString() // 带时区的完整格式
 
-            // 2. 创建Issue
-            const issue = await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `[CET6打卡] ${chinaDate}`,
-              body: '请填写今日CET6进展：\n- [ ] 背单词\n- [ ] 听听力\n- [ ] 做真题',
-              assignees: ['CuT-Shade'],
-              labels: ['@6-提升计划'],
-              milestone: 6
-            })
+              // 2. 创建Issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[CET6打卡] ${chinaDate}`,
+                body: '请填写今日CET6进展：\n- [ ] 背单词\n- [ ] 听听力\n- [ ] 做真题',
+                assignees: ['CuT-Shade'],
+                labels: ['@6-提升计划'],
+                milestone: 6
+              })
 
-            // 3. 获取项目ID（自动查询）
-            const projects = await github.graphql(`
-              query {
-                repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-                  projectsV2(first: 10) {
-                    nodes {
-                      id
-                      title
+              // 3. 获取项目ID（自动查询）
+              const projects = await github.graphql(`
+                query {
+                  repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+                    projectsV2(first: 10) {
+                      nodes {
+                        id
+                        title
+                      }
                     }
                   }
                 }
-              }
-            `);
-            const projectId = projects.repository.projectsV2.nodes[0].id; // 取第一个项目
+              `);
+              const projectId = projects.repository.projectsV2.nodes[0].id; // 取第一个项目
 
-            // 4. 添加到Project并获取item ID
-
-
-            await graphql(`
-              mutation {
-                addProjectV2ItemById(input: {
-                  projectId: "${projectId}",
-                  contentId: "${issue.data.node_id}"
-                }) {
-                  item {
-                    id
+              // 4. 添加到Project并获取item ID
+              const addToProjectResult = await graphql(`
+                mutation {
+                  addProjectV2ItemById(input: {
+                    projectId: "${projectId}",
+                    contentId: "${issue.data.node_id}"
+                  }) {
+                    item {
+                      id
+                    }
                   }
                 }
-              }
-            `)
-  
-            // 5. 更新自定义日期字段（根据你的JSON中的ID）
-            await graphql(`
-              mutation {
-                setStartDate: updateProjectV2ItemFieldValue(input: {
-                  projectId: "YOUR_PROJECT_ID"
-                  itemId: "${itemId}"
-                  fieldId: "PVTSSF_205924339"  # Start date字段ID
-                  value: { date: "${chinaDate}" }
-                }) { clientMutationId }
-                
-                setEndDate: updateProjectV2ItemFieldValue(input: {
-                  projectId: "YOUR_PROJECT_ID"
-                  itemId: "${itemId}"
-                  fieldId: "PVTSSF_205924340"  # End date字段ID
-                  value: { date: "${chinaDate}" }
-                }) { clientMutationId }
-              }
-            `)
-  
+              `)
+              
+              const itemId = addToProjectResult.addProjectV2ItemById.item.id;
+
+              // 5. 更新自定义日期字段
+              await graphql(`
+                mutation {
+                  setStartDate: updateProjectV2ItemFieldValue(input: {
+                    projectId: "${projectId}"
+                    itemId: "${itemId}"
+                    fieldId: "PVTSSF_205924339"  # Start date字段ID
+                    value: { date: "${chinaDate}" }
+                  }) { clientMutationId }
+                  
+                  setEndDate: updateProjectV2ItemFieldValue(input: {
+                    projectId: "${projectId}"
+                    itemId: "${itemId}"
+                    fieldId: "PVTSSF_205924340"  # End date字段ID
+                    value: { date: "${chinaDate}" }
+                  }) { clientMutationId }
+                }
+              `)
+
             } catch (error) {
               console.error('Error:', error)
               core.setFailed(error.message)
