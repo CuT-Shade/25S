@@ -1,0 +1,76 @@
+name: CET6 Daily Checkin Automation
+on:
+  schedule:
+    - cron: '0 20 * * *'  # UTC时间20:00 = 北京时间次日4:00
+    workflow_dispatch:
+
+permissions:
+  issues: write
+  projects: write
+  contents: write  # 新增权限
+
+jobs:
+  create-checkin-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Daily Checkin Issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { graphql } = github
+            try {
+              // 1. 获取北京时间
+              const now = new Date()
+              const chinaTime = new Date(now.getTime() + (8 * 60 * 60 * 1000)) // UTC+8
+              const chinaDate = chinaTime.toISOString().split('T')[0]
+              const fullDateTime = chinaTime.toISOString() // 带时区的完整格式
+
+          // 2. 创建Issue
+          const issue = await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `[CET6打卡] ${chinaDate}`,
+            body: '请填写今日CET6进展：\n- [ ] 背单词\n- [ ] 听听力\n- [ ] 做真题',
+            assignees: ['CuT-Shade'],
+            labels: ['@6-提升计划'],
+            milestone: 6
+          })
+
+          // 3. 添加到Project并获取item ID
+          const addToProject = await graphql(`
+            mutation {
+              addProjectV2ItemById(input: {
+                projectId: "1"  # 替换为你的项目ID
+                contentId: "${issue.data.node_id}"
+              }) {
+                item {
+                  id
+                }
+              }
+            }
+          `)
+          const itemId = addToProject.addProjectV2ItemById.item.id
+
+          // 4. 更新自定义日期字段（根据你的JSON中的ID）
+          await graphql(`
+            mutation {
+              setStartDate: updateProjectV2ItemFieldValue(input: {
+                projectId: "YOUR_PROJECT_ID"
+                itemId: "${itemId}"
+                fieldId: "PVTSSF_205924339"  # Start date字段ID
+                value: { date: "${chinaDate}" }
+              }) { clientMutationId }
+              
+              setEndDate: updateProjectV2ItemFieldValue(input: {
+                projectId: "YOUR_PROJECT_ID"
+                itemId: "${itemId}"
+                fieldId: "PVTSSF_205924340"  # End date字段ID
+                value: { date: "${chinaDate}" }
+              }) { clientMutationId }
+            }
+          `)
+
+        } catch (error) {
+          console.error('Error:', error)
+          core.setFailed(error.message)
+        }
