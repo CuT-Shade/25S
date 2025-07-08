@@ -1,0 +1,21 @@
+name: Watch Workflow Changes and Trigger
+
+on:
+  push:
+    paths:
+      - '.github/workflows/CET6_daily_checkin.yml'   # 当这个文件变动时触发
+
+jobs:
+  trigger-daily-checkin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Daily Checkin Workflow
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "daily-checkin.yml",  # 或者使用 workflow ID（更稳定）
+              ref: "main"                        # 分支名（如 main、master）
+            })
