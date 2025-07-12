@@ -19,6 +19,9 @@ To maintain a structured and consistent approach to learning over the summer bre
 
 en version
 ```mermaid
+--- 
+displayMode: compact 
+---
 gantt
     title HUST Cafeteria Opening Schedule (2025-07-01 to 2025-09-01)
     dateFormat  YYYY-MM-DD
